@@ -16,10 +16,11 @@ import traceback
 #重要
 #pyautogui.locateOnScreenの画像判定はNGだとエラーを返し処理が中団する為、try-except文じゃないと処理が進まない
 
-def wait_for_image (image_path,image_name, pass_confidence) :
+#関数に初期値を設定することで呼び出し時に引数を設定しない場合にデフォルトで関数で設定した値が使われる
+def wait_for_image (image_path,image_name, pass_confidence, retry_maxcount=10) :
     time_count = 1.0
     retry_count = 0
-    retry_maxcount = 10
+    # retry_maxcount = 10
     image_location = None
 
     while retry_count < retry_maxcount:
@@ -36,6 +37,7 @@ def wait_for_image (image_path,image_name, pass_confidence) :
         if image_location:
             
             pyautogui.click(pyautogui.center(image_location),duration=1)
+            print("")
             print(f"OK:{image_name}のセンター位置にマウス移動＋クリックが完了しました")
             print("")
             time.sleep(time_count)     #1.0秒待機
