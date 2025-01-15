@@ -1,6 +1,7 @@
 import pyautogui
 import time
 import traceback
+from component.listen_for_key import stop_flag
 
 
 #指定された画像が見つかるまで待機し、見つかったらクリック。
@@ -23,6 +24,8 @@ def wait_for_image (image_path,image_name, pass_confidence, retry_maxcount=10) :
     # retry_maxcount = 10
     image_location = None
 
+    #whileの前にプログラム中断flagの追加
+    
     while retry_count < retry_maxcount:
         #locateOnScreenでimage_pathの画像が画面上にあるか判定
         try:
