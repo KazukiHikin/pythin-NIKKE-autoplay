@@ -56,6 +56,7 @@ python script.py
 | `component/listen_for_key.py` | キー入力の監視 |
 | `component/singleton_flag.py` | 中断フラグをファイル間で共有するシングルトン |
 | `component/highlight.py` | クリック前に対象を赤枠で表示（確認用） |
+| `component/overlay.py` | 実行中に画面を薄暗くして「自動操作中」と表示 |
 | `component/debug_match.py` | 画像の一致率を調べる道具（自動化本体では使わない） |
 | `img/` | 画面認識に使う参照画像 |
 
@@ -90,10 +91,21 @@ from component.debug_match import crop_from_screen
 crop_from_screen(左, 上, 幅, 高さ, "interception.png")
 ```
 
-## 確認用の赤枠表示
+## 画面表示（赤枠・自動操作中の案内）
 
-クリックする直前に、対象の位置を赤枠で0.6秒表示します。狙った場所を押せているかの確認用です。
-`component/highlight.py` の `ENABLED = False` で無効にできます。
+- **赤枠** … 画像が見つかると対象の少し外側に枠を出し、マウス移動からクリックが終わるまで表示し続けます。
+  狙った場所を押せているかの確認用です。枠は白い縁取り付きの赤線（二重線）なので、赤いボタンの上でも見えます。
+  色・太さ・余白は `component/highlight.py` 先頭の定数で変えられ、`ENABLED = False` で無効にできます。
+- **自動操作中の案内** … 実行中は画面全体が薄暗くなり、中央に「自動操作中」と出ます。
+  終了・中断・エラーのどの場合でも自動で消えます。`component/overlay.py` の `ENABLED = False` で無効にできます。
+  見た目だけ確認したい時は `python -m component.overlay --show-in-capture` で単体起動できます。
 
-枠はフォーカスを奪わず（`WS_EX_NOACTIVATE`）、クリックを素通りさせる（`WS_EX_TRANSPARENT`）
-設定にしてあります。これが無いとNIKKEが非アクティブになり、クリックが効かなくなります。
+どちらも次の3つを満たすように作ってあります。
+
+| 性質 | 理由 |
+|---|---|
+| フォーカスを奪わない | 奪うとNIKKEが非アクティブになり、クリックが効かなくなる |
+| クリックが素通りする | 表示の上からクリックしてもゲームに届くようにする |
+| スクリーンショットに写らない | 写ると画像認識の一致率が下がる。`WDA_EXCLUDEFROMCAPTURE` で除外している |
+
+3つ目は目には見えるがスクショには写らない、という状態です。`debug_match` でスクショを撮っても案内や枠は写りません。

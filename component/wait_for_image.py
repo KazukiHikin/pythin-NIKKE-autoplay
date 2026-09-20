@@ -58,10 +58,9 @@ def wait_for_image (image_path,image_name, pass_confidence, retry_maxcount=10) :
         left, top, width, height = box
         center = (left + width // 2, top + height // 2)
 
-        #クリック前に、どこを押そうとしているかを赤枠で見せる
-        highlight.show_box(left, top, width, height)
-
-        pyautogui.click(center,duration=1)
+        #どこを押そうとしているかを、クリックが終わるまで赤枠で見せる
+        with highlight.box(left, top, width, height):
+            pyautogui.click(center,duration=1)
         print("")
         print(f"OK:{image_name}のセンター位置にマウス移動＋クリックが完了しました。一致率{confidence:.3f}/必要{pass_confidence}")
         print("")
