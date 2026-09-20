@@ -1,3 +1,8 @@
+> **このリポジトリは移動しました。**
+> 開発は [feature-node-graph](https://github.com/KazukiHikin/feature-node-graph) で続けています
+> （ノードグラフ画面 + 自動操作エンジン + `games/nikke/` として統合）。
+> ここは履歴の参照用として残しています。
+
 # pythin-NIKKE-autoplay
 
 PC版「勝利の女神:NIKKE」の迎撃戦を自動で周回するツールです。画面を画像認識して、決まった順番にボタンをクリックしていきます。
