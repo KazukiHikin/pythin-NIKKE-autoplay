@@ -6,8 +6,25 @@ from pathlib import Path
 from component import highlight
 from component.singleton_flag import SingletonFlag, ProgramInterrupted
 
-#カレントディレクトリに関係なく画像を見つけられるよう、aaaフォルダを基準にする
+#カレントディレクトリに関係なく画像を見つけられるよう、プロジェクトフォルダを基準にする
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+#クリックの動き。NIKKEはタッチ操作を模しているため、到着直後の一瞬の押下は取りこぼされることがある
+MOVE_DURATION = 1.0     #マウスを目的地まで動かす秒数
+CLICK_SETTLE = 0.15     #到着してから押すまでの間
+CLICK_HOLD = 0.08       #押している時間
+
+#クリック後の確認。画面が変わっていなければ押し直す
+CLICK_VERIFY_WAIT = 1.5 #クリック後、画面が変わるのを待つ秒数
+CLICK_RETRY_MAX = 3     #押し直す上限
+
+
+def _click(center):
+    pyautogui.moveTo(center[0], center[1], duration=MOVE_DURATION)
+    time.sleep(CLICK_SETTLE)
+    pyautogui.mouseDown()
+    time.sleep(CLICK_HOLD)
+    pyautogui.mouseUp()
 
 
 def _locate_image(full_image_path, pass_confidence):
@@ -55,17 +72,29 @@ def wait_for_image (image_path,image_name, pass_confidence, retry_maxcount=10) :
             time.sleep(time_count)
             continue
 
-        left, top, width, height = box
-        center = (left + width // 2, top + height // 2)
+        #見つかったのでクリック。押した後に画像が消えていなければ（＝画面が変わっていなければ）押し直す
+        for attempt in range(1, CLICK_RETRY_MAX + 1):
+            if flag_manager.is_stop_requested():
+                raise ProgramInterrupted(f"「{image_name}」のクリック中にキー入力を検知したため処理を中断しました")
 
-        #どこを押そうとしているかを、クリックが終わるまで赤枠で見せる
-        with highlight.box(left, top, width, height):
-            pyautogui.click(center,duration=1)
-        print("")
-        print(f"OK:{image_name}のセンター位置にマウス移動＋クリックが完了しました。一致率{confidence:.3f}/必要{pass_confidence}")
-        print("")
-        time.sleep(time_count)     #1.0秒待機
-        #関数処理終了させるためreturnを使う
-        return center
+            left, top, width, height = box
+            center = (left + width // 2, top + height // 2)
+
+            #どこを押そうとしているかを、クリックが終わるまで赤枠で見せる
+            with highlight.box(left, top, width, height):
+                _click(center)
+
+            time.sleep(CLICK_VERIFY_WAIT)
+            box, still_confidence = _locate_image(full_image_path, pass_confidence)
+            if box is None:
+                print("")
+                print(f"OK:{image_name}のセンター位置にマウス移動＋クリックが完了しました。一致率{confidence:.3f}/必要{pass_confidence}")
+                print("")
+                #関数処理終了させるためreturnを使う
+                return center
+
+            print(f"クリックしましたが画面が変わっていません（{image_name}がまだ見えている。一致率{still_confidence:.3f}）。{attempt}/{CLICK_RETRY_MAX}回目、押し直します")
+
+        raise RuntimeError(f"「{image_name}」を{CLICK_RETRY_MAX}回クリックしても画面が変わりませんでした。処理を中断します")
 
     raise RuntimeError(f"画像{image_path}が見つかりませんでした。最大試行回数{retry_maxcount}回に到達しました。raise呼び出しの為処理を中断します")
