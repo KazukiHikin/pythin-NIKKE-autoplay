@@ -1,10 +1,6 @@
-import pyautogui
-import sys
 import threading
-from component.activate_window import activate_window
-from component.click_image import click_image
 from component.listen_for_key import listen_for_key
-from component.listen_for_key import stop_flag
+from component.singleton_flag import ProgramInterrupted
 from order.order_interception import order_interception
 
 
@@ -12,15 +8,14 @@ from order.order_interception import order_interception
 # -----管理者じゃないとguiのclickが反応しない----------------------
 
 
-#キーボードの入力を監視するコンポーネントを別で作成する
-#それをorder_inberceptionやwait_for_imageに組めるようにする
-
-
 if __name__ == "__main__":
     # listen_for_keyをバックグラウンドスレッドで実行
     thread = threading.Thread(target=listen_for_key, daemon=True)
     thread.start()  # スレッドを開始
 
-
-order_interception()
-print("メインスクリプトの処理が終了しました")
+    #----orderで画像クリック処理の開始
+    try:
+        order_interception()
+        print("メインスクリプトの処理が終了しました")
+    except ProgramInterrupted as e:
+        print(f"キー入力により処理を中断しました:{e}")

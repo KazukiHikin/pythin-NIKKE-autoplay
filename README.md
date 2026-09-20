@@ -1,1 +1,99 @@
 # pythin-NIKKE-autoplay
+
+PC版「勝利の女神:NIKKE」の迎撃戦を自動で周回するツールです。画面を画像認識して、決まった順番にボタンをクリックしていきます。
+
+## 動作の流れ
+
+```
+script.py
+  ├─ listen_for_key      … 別スレッドでキー入力を監視（何か押されたら中断）
+  └─ order_interception  … 迎撃戦の手順を順番に実行
+       ├─ activate_window  … NIKKEのウィンドウを前面に出す
+       └─ wait_for_image   … 画像が見つかるまで待って、見つかったらクリック
+            ├─ アーク
+            ├─ 迎撃戦
+            ├─ 迎撃戦-特殊個体
+            ├─ 戦闘突入
+            └─ 空いてるところをタップ（戦闘終了待ちのため最大180回リトライ）
+```
+
+## 必要なもの
+
+- Python 3.13
+- NIKKE のPC版クライアント
+
+```bash
+pip install -r requirements.txt
+```
+
+`opencv-python` は必須です。入っていないと一致率（confidence）による判定ができず、
+「画像が見つかりません」という紛らわしいエラーになります。
+
+## 実行方法
+
+**管理者権限で実行する必要があります。**
+
+NIKKEは管理者権限で動作しているため、通常の権限で起動したプログラムからは
+Windowsの保護機能（UIPI）によってマウス操作がブロックされ、カーソルすら動きません。
+VSCodeやターミナルを「管理者として実行」で起動してください。
+
+NIKKEをロビー画面にした状態で、以下を実行します。
+
+```bash
+python script.py
+```
+
+実行中に**何かキーを押すと中断**します。
+
+## ファイル構成
+
+| パス | 役割 |
+|---|---|
+| `script.py` | エントリーポイント |
+| `order/order_interception.py` | 迎撃戦の手順（クリックする順番の定義） |
+| `component/activate_window.py` | NIKKEのウィンドウを前面に出す |
+| `component/wait_for_image.py` | 画像を探してクリック。リトライと中断判定もここ |
+| `component/listen_for_key.py` | キー入力の監視 |
+| `component/singleton_flag.py` | 中断フラグをファイル間で共有するシングルトン |
+| `component/highlight.py` | クリック前に対象を赤枠で表示（確認用） |
+| `component/debug_match.py` | 画像の一致率を調べる道具（自動化本体では使わない） |
+| `img/` | 画面認識に使う参照画像 |
+
+## 画像が見つからない時
+
+ゲームのアップデートでUIが変わると、`img/` の参照画像が古くなって一致しなくなります。
+実行ログには毎回の一致率が出るので、そこで判断できます。
+
+```
+画像、迎撃戦が見つかりません。一致率0.441/必要0.7。画像パス、img/interception.png。1/10回目の再確認。
+```
+
+- **0.9前後で止まる** … 閾値（`pass_confidence`）を少し下げれば通る
+- **0.4程度** … 画像が古い。下記の手順で差し替える
+- **画面遷移の直後に低い値が数回出る** … 正常（前の画面を見ているだけ）
+
+### 一致率を調べる
+
+`aaa` フォルダで実行します。全画像の一致率と、赤枠を描いた画像が `debug_out/` に出力されます。
+
+```bash
+python -m component.debug_match                 # 全部まとめて
+python -m component.debug_match interception    # 個別に
+```
+
+### 参照画像を差し替える
+
+対象が写っている状態で、画面から切り出して `img/` に保存します。
+
+```python
+from component.debug_match import crop_from_screen
+crop_from_screen(左, 上, 幅, 高さ, "interception.png")
+```
+
+## 確認用の赤枠表示
+
+クリックする直前に、対象の位置を赤枠で0.6秒表示します。狙った場所を押せているかの確認用です。
+`component/highlight.py` の `ENABLED = False` で無効にできます。
+
+枠はフォーカスを奪わず（`WS_EX_NOACTIVATE`）、クリックを素通りさせる（`WS_EX_TRANSPARENT`）
+設定にしてあります。これが無いとNIKKEが非アクティブになり、クリックが効かなくなります。
